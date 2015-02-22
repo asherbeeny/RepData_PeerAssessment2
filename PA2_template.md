@@ -2,8 +2,25 @@
 ## Analysis of U.S. National Oceanic and Atmospheric Administration's (NOAA) storm data and their impact on population health and economy
 
 ##Synopsis
-In this report we are exploring and analysing the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm data collected between the year 1950 and 2011. The objective of this report is to identify the major storms and weather events in the United States that have the most impact on population health in terms of fatalities and injuries and on economy in terms of property damage. Based on the Anlysis performed, the **excessive heat** and **tornado** are most harmful with respect to population health, while **flood**, **drought**, **and hurricane/typhoon** have the greatest economic consequences.
+In this report we are exploring and analysing the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm data collected between the year 1950 and 2011. The objective of this report is to identify the major storms and weather events in the United States that have the most impact on population health in terms of fatalities and injuries and on economy in terms of property & crops damage. Based on the Anlysis performed, the **excessive heat** and **tornado** are most harmful with respect to population health, while **flood**, and **hurricane/typhoon** have the greatest economic consequences.
  
+## Load needed libraries
+
+```r
+library(ggplot2)
+```
+
+```
+## Warning: package 'ggplot2' was built under R version 3.1.2
+```
+
+```r
+library(plyr)
+```
+
+```
+## Warning: package 'plyr' was built under R version 3.1.2
+```
 
 ## Data Processing
 - First we need to download the data from this URL and save it in our working directory
@@ -31,11 +48,6 @@ if (file.exists(paste(working_directory,"repdata-data-StormData.csv.bz2", sep="/
 ```
 
 
-
-```r
-#head(storm_data)
-```
-
 - Limit the dataset to needed columns only to analyze the impact on population health and economy
 
 
@@ -56,7 +68,7 @@ head(storm_data)
 
 
 
-- Prepare economy data by converting the exp characters into number and create a new variable for cash
+- Prepare economy data by converting the exp characters into number 
 
 ```r
 # get list of unique values in PROPDMGEXP
@@ -108,8 +120,105 @@ storm_data$PROPDMGCash <- storm_data$PROPDMGEXP*storm_data$PROPDMG
 storm_data$CROPDMGCash <- storm_data$CROPDMGEXP*storm_data$CROPDMG
 ```
 
-- Aggregate the values per event type
-
-
-
 ## Results
+
+## Most harmful events with respect to population health
+- Get top 5 fatalities and injuries by event type and plot both graphs
+
+
+```r
+#Aggregate the values per event type
+fatalbyevent <- aggregate(FATALITIES ~ EVTYPE, storm_data, sum,na.rm = T)
+injurbyevent <- aggregate(INJURIES ~ EVTYPE, storm_data, sum,na.rm = T)
+
+
+# order event type by 5 most harmful events which caused fatalities
+fatalbyevent <- fatalbyevent[order(fatalbyevent$FATALITIES, decreasing = TRUE), ]
+fatalities_top5 <- fatalbyevent[1:5, ]
+print(fatalities_top5)
+```
+
+```
+##             EVTYPE FATALITIES
+## 834        TORNADO       5633
+## 130 EXCESSIVE HEAT       1903
+## 153    FLASH FLOOD        978
+## 275           HEAT        937
+## 464      LIGHTNING        816
+```
+
+```r
+# order event type by 5 most harmful events which caused injuries
+
+injurbyevent <- injurbyevent[order(injurbyevent$INJURIES, decreasing = TRUE), ]
+# 5 most harmful causes of injuries
+injurbyevent_top5 <- injurbyevent[1:5, ]
+print(injurbyevent_top5)
+```
+
+```
+##             EVTYPE INJURIES
+## 834        TORNADO    91346
+## 856      TSTM WIND     6957
+## 170          FLOOD     6789
+## 130 EXCESSIVE HEAT     6525
+## 464      LIGHTNING     5230
+```
+
+```r
+plot_fatalities <- qplot(EVTYPE, data = fatalities_top5, weight = FATALITIES, geom = "bar", binwidth = 1) + 
+  scale_y_continuous("Fatalities Count") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + xlab("Weather Event Type") + 
+  ggtitle("Fatalities by Event Type in the U.S.\n from 1995 - 2011")
+
+plot_injuries <- qplot(EVTYPE, data = injurbyevent_top5, weight = INJURIES, geom = "bar", binwidth = 1) + scale_y_continuous("Injuries Count") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + xlab("Weather Event Type") + 
+  ggtitle("Injuries by Weather event Type in the U.S.\n from 1995 - 2011")
+
+
+plot_fatalities
+```
+
+![](PA2_template_files/figure-html/unnamed-chunk-8-1.png) 
+
+```r
+plot_injuries
+```
+
+![](PA2_template_files/figure-html/unnamed-chunk-8-2.png) 
+
+
+- Based on the above histograms, we notice that **Excessive Heat** and **Tornado** caused most fatalities; with respect to injuries, **Tornato** caused most injuries in the United States from 1995 to 2011.
+
+
+## Most harmful events with respect to economy
+
+- Get top 10 weather event type impacting economy and plot the graph
+
+
+```r
+c<-ddply(storm_data,.(EVTYPE),summarize,PROPDMGCash=sum(PROPDMGCash),CROPDMGCash=sum(CROPDMGCash))
+
+economy_damage<-mutate(c,economy_damage=PROPDMGCash+CROPDMGCash,economy_damage_m=economy_damage/1000000)
+
+# order event type by 10 most harmful events which affected ecconomy
+economy_damage_ordered<-arrange(economy_damage,desc(economy_damage_m))
+economy_damage_top10 <- economy_damage_ordered[1:10,]
+
+plot_economy_damage<- qplot(EVTYPE, data = economy_damage_top10, weight = economy_damage_m, geom = "bar", binwidth = 1) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + scale_y_continuous("Economy Damage (M$)") + 
+  xlab("Weather event Type") + ggtitle("Top 10 Weather events impacting economy in\n the U.S. from 1995 - 2011")
+
+plot_economy_damage
+```
+
+![](PA2_template_files/figure-html/unnamed-chunk-9-1.png) 
+
+
+- Based on the above histograms, we notice that **Flood** and **hurricane/typhoon** had the most damage impact with respect to economy in the United States from 1995 to 2011.
+
+
+
+## Conclusion
+Based on the analysis perfoormed, **Tornado** and **Excessive Heat** are most harmful with respect to population health. on the other hand **Flood** and **hurricane/typhoon** had the most damage impact with respect to economy in the United States from 1995 to 2011.
+

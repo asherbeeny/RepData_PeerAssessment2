@@ -52,6 +52,48 @@ storm_data$CROPDMGCash <- storm_data$CROPDMGEXP*storm_data$CROPDMG
 fatalbyevent <- aggregate(FATALITIES ~ EVTYPE, storm_data, sum,na.rm = T)
 injurbyevent <- aggregate(INJURIES ~ EVTYPE, storm_data, sum,na.rm = T)
 
+# order event type by 5 most harmful events which caused fatalities
+fatalbyevent <- fatalbyevent[order(fatalbyevent$FATALITIES, decreasing = TRUE), ]
+fatalities_top5 <- fatalbyevent[1:5, ]
+print(fatalities_top5)
 
-plot (fatalbyevent$EVTYPE)
-plot (injurbyevent$INJURIES, injurbyevent$EVTYPE)
+# order event type by 5 most harmful events which caused injuries
+
+injurbyevent <- injurbyevent[order(injurbyevent$INJURIES, decreasing = TRUE), ]
+# 5 most harmful causes of injuries
+injurbyevent_top5 <- injurbyevent[1:5, ]
+print(injurbyevent_top5)
+
+
+
+
+
+
+library(ggplot2)
+library(plyr)
+
+plot_fatalities <- qplot(EVTYPE, data = fatalities_top5, weight = FATALITIES, geom = "bar", binwidth = 1) + 
+  scale_y_continuous("Fatalities Count") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + xlab("Event Type") + 
+  ggtitle("Fatalities by Event Type\n in the U.S.\n from 1995 - 2011")
+
+plot_injuries <- qplot(EVTYPE, data = injurbyevent_top5, weight = INJURIES, geom = "bar", binwidth = 1) + scale_y_continuous("Injuries Count") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + xlab("Event Type") + 
+  ggtitle("Injuries by Weather event Type\n in the U.S.\n from 1995 - 2011")
+
+plot_fatalities
+plot_injuries
+
+c<-ddply(storm_data,.(EVTYPE),summarize,PROPDMGCash=sum(PROPDMGCash),CROPDMGCash=sum(CROPDMGCash))
+
+economy_damage<-mutate(c,economy_damage=PROPDMGCash+CROPDMGCash,economy_damage_m=economy_damage/1000000)
+
+# order event type by 10 most harmful events which affected ecconomy
+economy_damage_ordered<-arrange(economy_damage,desc(economy_damage_m))
+economy_damage_top10 <- economy_damage_ordered[1:10,]
+
+plot_economy_damage<- qplot(EVTYPE, data = economy_damage_top10, weight = economy_damage_m, geom = "bar", binwidth = 1) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + scale_y_continuous("Economy Damage (M$)") + 
+  xlab("Severe Weather Type") + ggtitle("Top 10 Weather events impacting economy in\n the U.S. from 1995 - 2011")
+
+plot_economy_damage
